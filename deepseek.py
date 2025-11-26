@@ -1,7 +1,9 @@
 from __builtins__ import *
 
+# 全局变量记录死南瓜状态
+has_dead_pumpkin = False
 
-# ==================== 移动模块 ====================
+
 def move_to_start():
     """移动到起点 (0,0)"""
     x, y = get_pos_x(), get_pos_y()
@@ -11,22 +13,6 @@ def move_to_start():
         move(South)
 
 
-def snake_move(direction):
-    """蛇形移动，返回新的方向"""
-    if direction == North:
-        move(North)
-        if get_pos_y() == 0:  # 到达北边界
-            move(East)
-            return South
-    else:  # South
-        move(South)
-        if get_pos_y() == get_world_size() - 1:  # 到达南边界
-            move(East)
-            return North
-    return direction
-
-
-# ==================== 种植模块 ====================
 def get_plant_type():
     """根据位置决定种植什么"""
     x, y = get_pos_x(), get_pos_y()
@@ -44,7 +30,7 @@ def get_plant_type():
 
 def prepare_ground(plant_type):
     """准备合适的土地"""
-    needs_soil = plant_type in [Entities.Pumpkin, Entities.Carrot, Entities.Sunflower]
+    needs_soil = plant_type in [Entities.Pumpkin, Entities.Carrot]
     current_ground = get_ground_type()
 
     if needs_soil and current_ground == Grounds.Grassland:
@@ -53,15 +39,10 @@ def prepare_ground(plant_type):
         till()
 
 
-def plant_crop(plant_type):
-    """种植作物"""
-    prepare_ground(plant_type)
-    plant(plant_type)
-
-
-# ==================== 处理单个地块 ====================
 def process_tile():
-    """处理当前地块的所有操作"""
+    """处理当前地块"""
+    global has_dead_pumpkin
+
     # 浇水
     if get_water() < 0.5 and num_items(Items.Water) > 0:
         use_item(Items.Water)
@@ -69,38 +50,64 @@ def process_tile():
     current_entity = get_entity_type()
     target_plant = get_plant_type()
 
-    # 处理死南瓜
+    # 记录死南瓜
+    if current_entity == Entities.Dead_Pumpkin:
+        has_dead_pumpkin = True
+
+    # 处理死南瓜（立即清除）
     if current_entity == Entities.Dead_Pumpkin:
         harvest()
-        plant_crop(Entities.Pumpkin)
+        prepare_ground(Entities.Pumpkin)
+        plant(Entities.Pumpkin)
         return
 
-    # 如果可以收获且不是目标植物（南瓜除外）
-    if can_harvest():
-        if current_entity != target_plant and current_entity != Entities.Pumpkin:
+    # 南瓜收获逻辑：只有在没有死南瓜的情况下才收获
+    if current_entity == Entities.Pumpkin and can_harvest():
+        if not has_dead_pumpkin:  # 本轮扫描没有发现死南瓜
             harvest()
-            plant_crop(target_plant)
-    # 如果地块为空，种植目标植物
+            prepare_ground(target_plant)
+            plant(target_plant)
+        return
+
+    # 其他植物的收获逻辑
+    if can_harvest() and current_entity != target_plant:
+        harvest()
+        prepare_ground(target_plant)
+        plant(target_plant)
     elif current_entity is None:
-        plant_crop(target_plant)
+        prepare_ground(target_plant)
+        plant(target_plant)
 
 
-# ==================== 主程序 ====================
+# 主循环
 def main():
-    """主循环"""
+    global has_dead_pumpkin
+
     move_to_start()
     direction = North
+    scan_count = 0
 
     while True:
+        # 每轮扫描开始时重置死南瓜状态
+        if get_pos_x() == 0 and get_pos_y() == 0:
+            has_dead_pumpkin = False
+            scan_count += 1
+            quick_print(f"开始第{scan_count}轮扫描")
+
         # 处理当前地块
         process_tile()
 
         # 蛇形移动
-        direction = snake_move(direction)
-
-        # 每完成一轮扫描打印一次
-        if get_pos_x() == 0 and get_pos_y() == 0:
-            quick_print("完成一轮扫描")
+        if direction == North:
+            move(North)
+            if get_pos_y() == 0:
+                move(East)
+                direction = South
+        else:
+            move(South)
+            if get_pos_y() == get_world_size() - 1:
+                move(East)
+                direction = North
 
 
 # 运行程序

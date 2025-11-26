@@ -52,6 +52,9 @@ def main():
 	h_dir = East
 	v_dir = North
 	while True:
+		if get_pos_x() == 0 and get_pos_y() == 0:
+			no_dead_pumpkin = True
+
 		move2start()
 		if no_dead_pumpkin:
 			harvest()
