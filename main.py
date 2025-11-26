@@ -1,13 +1,15 @@
 from __builtins__ import *
 
-def back(direction):
-	dir = {
+
+
+def move_back(direction):
+	reDir = {
 		South: North,
 		North: South,
 		East: West,
 		West: East
 	}
-	move(dir[direction])
+	move(reDir[direction])
 
 def move2start():
 	x, y = get_pos_x(), get_pos_y()
@@ -49,32 +51,35 @@ def get_plant_type():
 
 def main():
 	no_dead_pumpkin = False
-	h_dir = East
-	v_dir = North
+	# move2start()
 	while True:
-		if get_pos_x() == 0 and get_pos_y() == 0:
-			no_dead_pumpkin = True
-
-		move2start()
-		if no_dead_pumpkin:
-			harvest()
+		dead_pumpkin_num = 0
 		for i in range(get_world_size()):
 			for j in range(get_world_size()):
+				# print(i, j)
+				entity_type = get_entity_type()
+
 				if get_water() <= 0.5:
 					use_item(Items.Water)
-				if get_entity_type() == Entities.Dead_Pumpkin:
-					till_and_plant(Entities.Pumpkin)
-					no_dead_pumpkin = False
 				if can_harvest():
-					if get_entity_type() != get_plant_type() or get_entity_type() != Entities.Pumpkin:
+					if get_plant_type() == Entities.Pumpkin:
+						if no_dead_pumpkin == True:
+							harvest()
+							till_and_plant(Entities.Pumpkin)
+					else:
 						harvest()
 						till_and_plant(get_plant_type())
+
 				else:
-					if get_entity_type() is None:
-						till_and_plant(get_plant_type())
+					if entity_type == Entities.Dead_Pumpkin:
+						no_dead_pumpkin = False
+						dead_pumpkin_num += 1
+					till_and_plant(get_plant_type())
 				move(North)
 			move(East)
-		no_dead_pumpkin = True
+		if dead_pumpkin_num == 0:
+			no_dead_pumpkin = True
+		# break
 
 
 main()
